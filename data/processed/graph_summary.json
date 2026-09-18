@@ -1,0 +1,19 @@
+{
+    "wallet_graph": {
+        "nodes": 100,
+        "edges": 510
+    },
+    "ip_graph": {
+        "nodes": 50,
+        "edges": 1497
+    },
+    "investigation_graph": {
+        "total_nodes": 680,
+        "total_edges": 4114,
+        "wallet_nodes": 100,
+        "transaction_nodes": 510,
+        "ip_nodes": 50,
+        "entity_nodes": 20,
+        "number_of_connected_components": 1
+    }
+}

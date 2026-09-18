@@ -1,0 +1,138 @@
+# =========================
+# Python
+# =========================
+
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Python virtual environments
+venv/
+env/
+.venv/
+ENV/
+
+# =========================
+# Environment Variables
+# =========================
+
+.env
+.env.*
+*.env
+
+# =========================
+# Jupyter
+# =========================
+
+.ipynb_checkpoints/
+
+# =========================
+# Testing & Coverage
+# =========================
+
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+
+# =========================
+# Build / Distribution
+# =========================
+
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# =========================
+# IDE / Editor
+# =========================
+
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# =========================
+# Operating System Files
+# =========================
+
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# =========================
+# Logs
+# =========================
+
+*.log
+logs/
+
+# =========================
+# Streamlit
+# =========================
+
+.streamlit/secrets.toml
+
+# =========================
+# ML Models
+# Ignore generated/trained models
+# =========================
+
+models/*.pkl
+models/*.joblib
+models/*.h5
+models/*.pt
+models/*.pth
+
+# Keep the models folder
+!models/.gitkeep
+
+# =========================
+# Generated Output
+# =========================
+
+output/*
+!output/.gitkeep
+
+# =========================
+# GeoIP Databases
+# Large downloaded databases
+# =========================
+
+geoip/*.mmdb
+geoip/*.dat
+geoip/*.csv
+geoip/*.zip
+geoip/*.tar.gz
+
+# Keep the geoip folder
+!geoip/.gitkeep
+
+# =========================
+# Generated Data
+# Uncomment these if you do NOT
+# want generated datasets in Git
+# =========================
+
+# data/raw/*
+# !data/raw/.gitkeep
+
+# data/processed/*
+# !data/processed/.gitkeep
+
+# =========================
+# PyVis / Temporary Files
+# =========================
+
+*.html
+pyvis_output/
+
+# =========================
+# Local Configuration
+# =========================
+
+config.local.*
