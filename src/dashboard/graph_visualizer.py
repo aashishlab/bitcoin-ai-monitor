@@ -4,13 +4,13 @@ import networkx as nx
 from pyvis.network import Network
 
 
-# Visual Styling Mappings for Node Types
+# Visual Styling Mappings for Node Types (Cybersecurity Intelligence Theme)
 NODE_COLOR_MAP = {
-    "entity": "#9b59b6",       # Purple
-    "wallet": "#3498db",       # Blue
-    "transaction": "#e67e22",  # Orange
-    "ip": "#2ecc71",           # Green
-    "other": "#95a5a6"         # Gray
+    "entity": "#a855f7",       # Royal Purple
+    "wallet": "#38bdf8",       # Sky/Cyan Blue
+    "transaction": "#fb923c",  # Solar Amber
+    "ip": "#22c55e",           # Emerald Green
+    "other": "#94a3b8"         # Muted Slate
 }
 
 NODE_SHAPE_MAP = {
@@ -55,7 +55,7 @@ def extract_neighborhood_subgraph(
     if depth <= 1:
         total_found = len(hop1_nodes)
         if len(hop1_nodes) > max_nodes:
-            # Keep target + top max_nodes-1 direct neighbors
+            # Keep target + top max_nodes-1 direct neighbors by degree
             sorted_hop1 = sorted(
                 list(direct_neighbors),
                 key=lambda n: G.degree(n),
@@ -105,15 +105,6 @@ def format_node_tooltip(
 ) -> str:
     """
     Format a clean plain-text multiline tooltip for a graph node based on its type.
-
-    Args:
-        node_id (str): Prefixed or raw node identifier.
-        node_data (dict): Attributes dictionary from NetworkX node.
-        wallet_metrics_map (dict, optional): Metrics lookup for wallets.
-        ip_metrics_map (dict, optional): Metrics lookup for IPs.
-
-    Returns:
-        str: Clean plain-text multiline tooltip.
     """
     ntype = node_data.get("node_type", "unknown").lower()
     raw_label = node_data.get("label", node_id)
@@ -122,18 +113,17 @@ def format_node_tooltip(
 
     if ntype == "entity":
         entity_id = node_data.get("entity_id", raw_label)
-        lines.append("Entity Node")
-        lines.append(f"Entity ID: {entity_id}")
+        lines.append(f"ENTITY: {entity_id}")
+        lines.append("Type: Synthetic Owner Entity")
 
     elif ntype == "wallet":
         wallet_id = node_data.get("wallet_id", raw_label)
-        lines.append("Wallet Node")
-        lines.append(f"Wallet ID: {wallet_id}")
+        lines.append(f"WALLET: {wallet_id}")
         if wallet_metrics_map and wallet_id in wallet_metrics_map:
             w_meta = wallet_metrics_map[wallet_id]
-            lines.append(f"PageRank: {w_meta.get('pagerank', 'N/A')}")
-            lines.append(f"Betweenness: {w_meta.get('betweenness_centrality', 'N/A')}")
-            lines.append(f"Degree (In/Out): {w_meta.get('in_degree', 0)} / {w_meta.get('out_degree', 0)}")
+            lines.append(f"PageRank: {float(w_meta.get('pagerank', 0)):.6f}")
+            lines.append(f"Betweenness: {float(w_meta.get('betweenness_centrality', 0)):.6f}")
+            lines.append(f"In / Out Degree: {w_meta.get('in_degree', 0)} / {w_meta.get('out_degree', 0)}")
 
     elif ntype == "transaction":
         txid = node_data.get("txid", raw_label)
@@ -143,27 +133,25 @@ def format_node_tooltip(
         pattern = node_data.get("pattern_label", "normal")
         script = node_data.get("script_type", "N/A")
 
-        lines.append("Transaction Node")
-        lines.append(f"TXID: {txid}")
+        lines.append(f"TRANSACTION: {txid}")
         lines.append(f"Amount: {amount} BTC")
         lines.append(f"Fee: {fee} BTC")
-        lines.append(f"Pattern Label: {pattern}")
-        lines.append(f"Script Type: {script}")
+        lines.append(f"Pattern: {pattern}")
+        lines.append(f"Script: {script}")
         lines.append(f"Timestamp: {timestamp}")
 
     elif ntype == "ip":
         ip_addr = node_data.get("ip_address", raw_label)
         entity_meta = node_data.get("entity_id", "unmapped")
-        node_role = node_data.get("node_type_meta", "unknown")
+        node_role = node_data.get("node_type_meta", "peer_node")
 
-        lines.append("IP Address Node")
-        lines.append(f"IP Address: {ip_addr}")
-        lines.append(f"Simulated Role: {node_role}")
-        lines.append(f"Entity Association: {entity_meta}")
+        lines.append(f"IP NODE: {ip_addr}")
+        lines.append(f"Network Role: {node_role}")
+        lines.append(f"Entity: {entity_meta}")
         if ip_metrics_map and ip_addr in ip_metrics_map:
             ip_meta = ip_metrics_map[ip_addr]
-            lines.append(f"PageRank: {ip_meta.get('pagerank', 'N/A')}")
-            lines.append(f"Degree (In/Out): {ip_meta.get('in_degree', 0)} / {ip_meta.get('out_degree', 0)}")
+            lines.append(f"PageRank: {float(ip_meta.get('pagerank', 0)):.6f}")
+            lines.append(f"In / Out Obs: {ip_meta.get('in_degree', 0)} / {ip_meta.get('out_degree', 0)}")
 
     else:
         lines.append(f"Node: {node_id}")
@@ -176,15 +164,7 @@ def format_node_tooltip(
 
 def format_edge_tooltip(u: str, v: str, edge_data: dict) -> str:
     """
-    Format a clean plain-text multiline hover tooltip for a graph edge.
-
-    Args:
-        u (str): Source node identifier.
-        v (str): Destination node identifier.
-        edge_data (dict): Edge attribute dictionary.
-
-    Returns:
-        str: Clean plain-text multiline edge tooltip.
+    Format a clean hover tooltip for a graph edge.
     """
     rel = edge_data.get("relationship", edge_data.get("pattern_label", "connected_to"))
     txid = edge_data.get("txid", "")
@@ -195,9 +175,8 @@ def format_edge_tooltip(u: str, v: str, edge_data: dict) -> str:
     dst_port = edge_data.get("dst_port", "")
 
     lines = [f"Relationship: {rel}"]
-
     if txid:
-        lines.append(f"Transaction: {txid}")
+        lines.append(f"TXID: {txid}")
     if amount:
         lines.append(f"Amount: {amount} BTC")
     if fee:
@@ -206,7 +185,6 @@ def format_edge_tooltip(u: str, v: str, edge_data: dict) -> str:
         lines.append(f"Ports: {src_port} -> {dst_port}")
     if delay:
         lines.append(f"Obs. Delay: {delay} ms")
-
     lines.append(f"Direction: {u} -> {v}")
     return "\n".join(lines)
 
@@ -222,56 +200,37 @@ def build_pyvis_network(
     ip_metrics_map: dict = None
 ) -> str:
     """
-    Build and render an interactive PyVis graph HTML string with smart labels and tooltips.
-
-    Args:
-        subgraph (nx.MultiDiGraph): Subgraph to visualize.
-        target_node (str): Center target node.
-        direct_neighbors (set): Set of 1-hop neighbor node IDs.
-        show_all_labels (bool): Force show all labels regardless of graph size.
-        show_edge_labels (bool): Display static text on edges.
-        enable_physics (bool): Enable force-directed physics simulation.
-        wallet_metrics_map (dict, optional): Wallet metrics mapping.
-        ip_metrics_map (dict, optional): IP metrics mapping.
-
-    Returns:
-        str: HTML representation of the interactive PyVis graph.
+    Build and render an interactive PyVis graph HTML string with dark theme and lime highlights.
     """
     net = Network(
         height="640px",
         width="100%",
         directed=True,
-        bgcolor="#181818",
-        font_color="#ffffff"
+        bgcolor="#0a0d14",
+        font_color="#f1f5f9"
     )
 
     num_nodes = subgraph.number_of_nodes()
-
-    # Rule 3: Smart Node Labels
-    # If graph <= 30 nodes or show_all_labels is enabled -> show all labels.
-    # Otherwise, show labels only for target_node and direct 1-hop neighbors.
     smart_labels_active = (num_nodes > 30) and not show_all_labels
 
     for n, data in subgraph.nodes(data=True):
         ntype = data.get("node_type", "other").lower()
-        color = NODE_COLOR_MAP.get(ntype, "#95a5a6")
+        color = NODE_COLOR_MAP.get(ntype, "#94a3b8")
         shape = NODE_SHAPE_MAP.get(ntype, "dot")
         raw_label = data.get("label", str(n))
 
-        # Check if label should be visible
         if smart_labels_active:
             if n == target_node or n in direct_neighbors:
                 display_label = raw_label
             else:
-                display_label = ""  # Hide distant label to prevent clutter
+                display_label = ""
         else:
             display_label = raw_label
 
-        # Visual distinction for selected target node
         is_target = (n == target_node)
-        size = 28 if is_target else 16
-        border_width = 3 if is_target else 1
-        border_color = "#f1c40f" if is_target else color
+        size = 30 if is_target else 16
+        border_width = 3 if is_target else 1.5
+        border_color = "#bcf234" if is_target else "#1f2638"
 
         tooltip_text = format_node_tooltip(
             node_id=n,
@@ -287,15 +246,14 @@ def build_pyvis_network(
             color={
                 "background": color,
                 "border": border_color,
-                "highlight": {"background": "#e74c3c", "border": "#ffffff"}
+                "highlight": {"background": "#bcf234", "border": "#ffffff"}
             },
             shape=shape,
             size=size,
             borderWidth=border_width,
-            font={"size": 13, "color": "#ffffff", "face": "Helvetica"}
+            font={"size": 12, "color": "#f1f5f9", "face": "Inter, sans-serif"}
         )
 
-    # Add Edges (Rule 1: Hide static edge labels by default, show on hover)
     for u, v, data in subgraph.edges(data=True):
         edge_tooltip = format_edge_tooltip(u, v, data)
         static_label = ""
@@ -307,31 +265,30 @@ def build_pyvis_network(
             v,
             title=edge_tooltip,
             label=static_label,
-            color={"color": "#636e72", "highlight": "#f1c40f"},
-            arrows={"to": {"enabled": True, "scaleFactor": 0.6}},
+            color={"color": "#283247", "highlight": "#bcf234"},
+            arrows={"to": {"enabled": True, "scaleFactor": 0.5}},
             smooth={"type": "curvedCW", "roundness": 0.15}
         )
 
-    # Graph physics configuration
     if enable_physics:
         net.set_options("""
         {
           "physics": {
             "barnesHut": {
-              "gravitationalConstant": -4000,
-              "centralGravity": 0.3,
-              "springLength": 95,
+              "gravitationalConstant": -3200,
+              "centralGravity": 0.25,
+              "springLength": 90,
               "springConstant": 0.04,
-              "damping": 0.09
+              "damping": 0.1
             },
             "minVelocity": 0.75,
             "solver": "barnesHut"
           },
           "interaction": {
             "hover": true,
-            "tooltipDelay": 100,
+            "tooltipDelay": 80,
             "zoomView": true,
-            "navigationButtons": true
+            "navigationButtons": false
           }
         }
         """)
@@ -349,5 +306,24 @@ def build_pyvis_network(
         os.remove(tmp_path)
     except Exception:
         pass
+
+    # Inject dark background styling wrapper to remove default white frame borders
+    custom_style = """
+    <style>
+      body { margin: 0; background-color: #0a0d14; overflow: hidden; }
+      #mynetwork { border: 1px solid #1f2638; border-radius: 14px; background-color: #0a0d14; }
+      div.vis-tooltip {
+        background-color: #131722 !important;
+        color: #f1f5f9 !important;
+        border: 1px solid #2a334a !important;
+        border-radius: 8px !important;
+        padding: 8px 12px !important;
+        font-family: 'Inter', sans-serif !important;
+        font-size: 12px !important;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.6) !important;
+      }
+    </style>
+    """
+    html_code = html_code.replace("</head>", f"{custom_style}</head>")
 
     return html_code
