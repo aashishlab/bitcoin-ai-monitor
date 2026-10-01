@@ -1,7 +1,7 @@
 import altair as alt
 import pandas as pd
 import streamlit as st
-from src.dashboard.theme import render_kpi_card_html, render_status_badge
+from src.dashboard.theme import clean_html, render_kpi_card_html, render_status_badge
 
 
 def render_kpi_row(summary: dict, tx_count: int, obs_count: int):
@@ -39,12 +39,13 @@ def render_activity_chart(df: pd.DataFrame, title: str, subtitle: str, color_hex
     """
     Render a modern dark-themed time-series area chart using Altair.
     """
-    st.markdown(f"""
+    header_html = f"""
     <div style="margin-bottom: 8px;">
         <div style="font-size: 0.95rem; font-weight: 600; color: #ffffff;">{title}</div>
         <div style="font-size: 0.78rem; color: #94a3b8;">{subtitle}</div>
     </div>
-    """, unsafe_allow_html=True)
+    """
+    st.markdown(clean_html(header_html), unsafe_allow_html=True)
 
     if df.empty or "timestamp" not in df.columns or "count" not in df.columns:
         st.info("Activity data unavailable.")
@@ -104,7 +105,7 @@ def render_graph_legend():
     """
     Render a visually appealing, compact cybersecurity legend for node types and relationship flows.
     """
-    st.markdown("""
+    legend_html = """
     <div style="background-color: #131722; padding: 12px 16px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #1f2638; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px;">
       <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
         <span style="color: #64748b; font-size: 11px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">Node Palette:</span>
@@ -121,56 +122,84 @@ def render_graph_legend():
         <span style="color: #94a3b8; font-size: 11px;">IP &harr; TX <code style='color:#22c55e; background: rgba(34,197,94,0.1); padding: 2px 4px; border-radius: 4px;'>observed</code></span>
       </div>
     </div>
-    """, unsafe_allow_html=True)
+    """
+    st.markdown(clean_html(legend_html), unsafe_allow_html=True)
 
 
 def render_node_intelligence_panel(intel: dict):
     """
     Render an analyst-grade investigation panel for the selected node.
+    Outputs clean, unindented HTML passed through clean_html() to ensure
+    Streamlit CommonMark renders proper HTML instead of escaped code blocks.
     """
     if not intel.get("found", False):
-        st.markdown("""
+        empty_html = """
         <div class="cg-inspector-panel">
             <div class="cg-card-title">Node Intelligence</div>
-            <p style="color: #64748b; font-size: 0.85rem;">Select a node in the graph to inspect structural signals.</p>
+            <p style="color: #64748b; font-size: 0.85rem; margin-top: 8px;">Select a node in the graph to inspect structural signals.</p>
         </div>
-        """, unsafe_allow_html=True)
+        """
+        st.markdown(clean_html(empty_html), unsafe_allow_html=True)
         return
 
     ntype = intel.get("node_type", "unknown").capitalize()
     node_id = intel.get("node_id", "")
     metrics = intel.get("metrics", {})
     signals = intel.get("signals", [])
+    relationships = intel.get("relationships", [])
 
-    # Badge class per node type
+    # Badge variant, accent colors, and backgrounds per node type
     badge_variant = "lime"
+    accent_color = "#bcf234"
+    bg_subtle = "rgba(188, 242, 52, 0.05)"
+
     if ntype.lower() == "wallet":
         badge_variant = "blue"
+        accent_color = "#38bdf8"
+        bg_subtle = "rgba(56, 189, 248, 0.06)"
     elif ntype.lower() == "transaction":
         badge_variant = "amber"
+        accent_color = "#fb923c"
+        bg_subtle = "rgba(251, 146, 60, 0.06)"
     elif ntype.lower() == "entity":
         badge_variant = "purple"
+        accent_color = "#a855f7"
+        bg_subtle = "rgba(168, 85, 247, 0.06)"
     elif ntype.lower() == "ip":
         badge_variant = "lime"
+        accent_color = "#22c55e"
+        bg_subtle = "rgba(34, 197, 94, 0.06)"
 
     badge_html = render_status_badge(f"● {ntype.upper()}", badge_variant)
 
-    # Render header & metrics
     metric_cells = "".join([
-        f"""
-        <div class="cg-metric-cell">
-            <div class="cg-metric-cell-label">{k}</div>
-            <div class="cg-metric-cell-val">{v}</div>
-        </div>
-        """ for k, v in metrics.items()
+        f'<div class="cg-metric-cell">'
+        f'<div class="cg-metric-cell-label">{k}</div>'
+        f'<div class="cg-metric-cell-val" style="color: {accent_color};">{v}</div>'
+        f'</div>'
+        for k, v in metrics.items()
     ])
 
-    signals_html = "".join([
-        f'<div class="cg-signal-item"><span>⚡</span><span>{sig}</span></div>'
-        for sig in signals
-    ])
+    if ntype.lower() == "entity" and relationships:
+        section_title = "Relationships"
+        items_html = "".join([
+            f'<div class="cg-signal-item" style="border-left: 3px solid {accent_color}; background-color: {bg_subtle};">'
+            f'<span style="color: {accent_color}; font-weight: 700; margin-right: 4px;">•</span>'
+            f'<span style="font-family: monospace; font-size: 0.85rem; color: #f1f5f9;">{rel}</span>'
+            f'</div>'
+            for rel in relationships
+        ])
+    else:
+        section_title = "Investigation Signals"
+        items_html = "".join([
+            f'<div class="cg-signal-item" style="border-left: 3px solid {accent_color}; background-color: {bg_subtle};">'
+            f'<span style="color: {accent_color}; font-weight: 700; margin-right: 4px;">•</span>'
+            f'<span>{sig}</span>'
+            f'</div>'
+            for sig in signals
+        ])
 
-    st.markdown(f"""
+    panel_html = f"""
     <div class="cg-inspector-panel">
         <div class="cg-inspector-header">
             <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -180,17 +209,19 @@ def render_node_intelligence_panel(intel: dict):
             <div class="cg-node-id-display">{node_id}</div>
         </div>
 
-        <div style="font-size: 0.72rem; text-transform: uppercase; color: #64748b; font-weight: 700; margin-bottom: 8px;">Structural Metrics</div>
+        <div style="font-size: 0.72rem; text-transform: uppercase; color: #64748b; font-weight: 700; margin-bottom: 8px; letter-spacing: 0.04em;">Structural Metrics</div>
         <div class="cg-metric-grid">
             {metric_cells}
         </div>
 
-        <div style="font-size: 0.72rem; text-transform: uppercase; color: #64748b; font-weight: 700; margin-bottom: 8px;">Graph Signals</div>
+        <div style="font-size: 0.72rem; text-transform: uppercase; color: #64748b; font-weight: 700; margin-bottom: 8px; letter-spacing: 0.04em;">{section_title}</div>
         <div style="margin-bottom: 14px;">
-            {signals_html}
+            {items_html}
         </div>
     </div>
-    """, unsafe_allow_html=True)
+    """
+
+    st.markdown(clean_html(panel_html), unsafe_allow_html=True)
 
     # Connected Neighbors Breakdown in collapsible sections
     entities = intel.get("connected_entities", [])
@@ -224,7 +255,7 @@ def render_graph_summary_cards(summary: dict):
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        st.markdown(f"""
+        c1_html = f"""
         <div class="cg-graph-intel-card">
             <div class="cg-graph-icon-box" style="background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.25);">
                 💼
@@ -237,10 +268,11 @@ def render_graph_summary_cards(summary: dict):
                 </div>
             </div>
         </div>
-        """, unsafe_allow_html=True)
+        """
+        st.markdown(clean_html(c1_html), unsafe_allow_html=True)
 
     with col2:
-        st.markdown(f"""
+        c2_html = f"""
         <div class="cg-graph-intel-card">
             <div class="cg-graph-icon-box" style="background: rgba(34, 197, 94, 0.12); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.25);">
                 🌐
@@ -253,10 +285,11 @@ def render_graph_summary_cards(summary: dict):
                 </div>
             </div>
         </div>
-        """, unsafe_allow_html=True)
+        """
+        st.markdown(clean_html(c2_html), unsafe_allow_html=True)
 
     with col3:
-        st.markdown(f"""
+        c3_html = f"""
         <div class="cg-graph-intel-card">
             <div class="cg-graph-icon-box" style="background: rgba(168, 85, 247, 0.12); color: #a855f7; border: 1px solid rgba(168, 85, 247, 0.25);">
                 🕸️
@@ -269,7 +302,9 @@ def render_graph_summary_cards(summary: dict):
                 </div>
             </div>
         </div>
-        """, unsafe_allow_html=True)
+        """
+        st.markdown(clean_html(c3_html), unsafe_allow_html=True)
+
 
 
 def render_selected_node_inspector(node_id: str, node_data: dict, wallet_metrics_map: dict = None, ip_metrics_map: dict = None):

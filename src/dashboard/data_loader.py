@@ -106,6 +106,23 @@ def get_hourly_activity_data(tx_features: pd.DataFrame, corr_events: pd.DataFram
     return tx_hourly, obs_hourly
 
 
+@st.cache_resource
+def get_graph_centrality_cache(_G):
+    """
+    Compute and cache PageRank and Betweenness Centrality for the graph.
+    Uses leading underscore in _G to prevent Streamlit from hashing the NetworkX graph object.
+    """
+    if _G is None or _G.number_of_nodes() == 0:
+        return {}, {}
+    try:
+        simple_g = nx.DiGraph(_G)
+        pr = nx.pagerank(simple_g, alpha=0.85, max_iter=200)
+        bc = nx.betweenness_centrality(simple_g)
+        return pr, bc
+    except Exception:
+        return {}, {}
+
+
 def get_node_intelligence_data(
     G: nx.MultiDiGraph,
     node_id: str,
@@ -115,6 +132,7 @@ def get_node_intelligence_data(
 ) -> dict:
     """
     Extract comprehensive analyst intelligence for a selected node in the investigation graph.
+    Uses actual topological metrics, pre-computed graph centrality, and relationship linkages.
     """
     if node_id not in G:
         return {"found": False, "node_id": node_id}
@@ -133,23 +151,51 @@ def get_node_intelligence_data(
     connected_txs = [n for n in all_neighbors if n.startswith("tx:")]
     connected_ips = [n for n in all_neighbors if n.startswith("ip:")]
 
+    # Pre-computed centrality cache on G for entities, unmapped nodes, etc.
+    pr_cache, bc_cache = get_graph_centrality_cache(G)
+
     signals = []
     structural_metrics = {}
+    relationships = []
 
     if ntype == "wallet":
-        wallet_id = node_data.get("wallet_id", raw_label)
+        wallet_id = node_data.get("wallet_id", raw_label.replace("wallet:", ""))
         w_meta = wallet_metrics_map.get(wallet_id, {})
         in_deg = int(w_meta.get("in_degree", len(in_neighbors)))
         out_deg = int(w_meta.get("out_degree", len(out_neighbors)))
-        pr = float(w_meta.get("pagerank", 0.0))
-        bc = float(w_meta.get("betweenness_centrality", 0.0))
+        pr = float(w_meta.get("pagerank", pr_cache.get(node_id, 0.0)))
+        bc = float(w_meta.get("betweenness_centrality", bc_cache.get(node_id, 0.0)))
+
+        # Actual transactions count
+        if connected_txs:
+            tx_count = len(connected_txs)
+        elif not tx_features_df.empty:
+            tx_count = len(tx_features_df[(tx_features_df["input_wallet"] == wallet_id) | (tx_features_df["output_wallet"] == wallet_id)])
+        else:
+            tx_count = in_deg + out_deg
 
         structural_metrics = {
-            "In-Degree": in_deg,
-            "Out-Degree": out_deg,
-            "PageRank": f"{pr:.6f}" if pr else "N/A",
-            "Betweenness": f"{bc:.6f}" if bc else "N/A"
+            "Transactions": tx_count,
+            "In Degree": in_deg,
+            "Out Degree": out_deg,
+            "PageRank": f"{pr:.6f}" if pr else "0.000000",
+            "Betweenness": f"{bc:.6f}" if bc else "0.000000"
         }
+
+        # Connected entity
+        if connected_entities:
+            entity_names = [e.replace("entity:", "") for e in connected_entities]
+            conn_entity_str = ", ".join(entity_names)
+        else:
+            conn_entity_str = "None"
+
+        graph_connectivity = G.degree(node_id)
+
+        signals = [
+            f"Connected entity: {conn_entity_str}",
+            f"Transaction relationships: {tx_count}",
+            f"Graph connectivity: {graph_connectivity}"
+        ]
 
         # Dynamic signals based on actual metrics
         if in_deg >= 7:
@@ -163,8 +209,24 @@ def get_node_intelligence_data(
         if len(connected_entities) > 1:
             signals.append(f"Multi-Entity Association — Associated with {len(connected_entities)} distinct entities")
 
+    elif ntype == "entity":
+        entity_id = node_data.get("entity_id", raw_label.replace("entity:", ""))
+        graph_degree = G.degree(node_id)
+        pr = pr_cache.get(node_id, 0.0)
+        bc = bc_cache.get(node_id, 0.0)
+
+        structural_metrics = {
+            "Connected Wallets": len(connected_wallets),
+            "Graph Degree": graph_degree,
+            "PageRank": f"{pr:.6f}",
+            "Betweenness": f"{bc:.6f}"
+        }
+
+        relationships = sorted([w.replace("wallet:", "") for w in connected_wallets])
+        signals = [f"Synthetic Entity Umbrella — Directly controls {len(connected_wallets)} wallet nodes"]
+
     elif ntype == "transaction":
-        txid = node_data.get("txid", raw_label)
+        txid = node_data.get("txid", raw_label.replace("tx:", ""))
         amount = float(node_data.get("amount", 0.0))
         fee = float(node_data.get("fee", 0.0))
         pattern = str(node_data.get("pattern_label", "normal"))
@@ -177,6 +239,14 @@ def get_node_intelligence_data(
             "Pattern": pattern
         }
 
+        input_wallets = [u.replace("wallet:", "") for u, v, d in G.in_edges(node_id, data=True) if u.startswith("wallet:")]
+        output_wallets = [v.replace("wallet:", "") for u, v, d in G.out_edges(node_id, data=True) if v.startswith("wallet:")]
+
+        if input_wallets:
+            signals.append(f"Input Wallet: {', '.join(input_wallets[:3])}")
+        if output_wallets:
+            signals.append(f"Output Wallet: {', '.join(output_wallets[:3])}")
+
         if pattern == "high_value_anomaly":
             signals.append("High-Value Transfer Flag — Transaction volume exceeds standard statistical threshold")
         elif pattern == "high_frequency_anomaly":
@@ -186,37 +256,35 @@ def get_node_intelligence_data(
         else:
             signals.append("Standard Propagation — Regular baseline transaction structure")
 
-        if len(connected_ips) >= 4:
-            signals.append(f"Wide P2P Dissemination — Correlated across {len(connected_ips)} distinct IP nodes")
+        if len(connected_ips) >= 1:
+            signals.append(f"P2P Dissemination — Correlated across {len(connected_ips)} distinct IP nodes")
 
     elif ntype == "ip":
-        ip_addr = node_data.get("ip_address", raw_label)
+        ip_addr = node_data.get("ip_address", raw_label.replace("ip:", ""))
         ip_meta = ip_metrics_map.get(ip_addr, {})
         in_deg = int(ip_meta.get("in_degree", len(in_neighbors)))
         out_deg = int(ip_meta.get("out_degree", len(out_neighbors)))
-        pr = float(ip_meta.get("pagerank", 0.0))
+        pr = float(ip_meta.get("pagerank", pr_cache.get(node_id, 0.0)))
+        bc = float(ip_meta.get("betweenness_centrality", bc_cache.get(node_id, 0.0)))
+        role = str(node_data.get("node_type_meta", ip_meta.get("node_type", "peer_node")))
+        entity_attr = str(node_data.get("entity_id", ip_meta.get("entity_id", "unmapped")))
 
         structural_metrics = {
             "In-Degree": in_deg,
             "Out-Degree": out_deg,
             "PageRank": f"{pr:.6f}" if pr else "N/A",
-            "Role": str(node_data.get("node_type_meta", "peer_node"))
+            "Betweenness": f"{bc:.6f}" if bc else "N/A"
         }
+
+        signals.append(f"Network Role: {role}")
+        if entity_attr and entity_attr != "unmapped":
+            signals.append(f"Entity Attribution: {entity_attr}")
+        signals.append(f"Graph connectivity: {G.degree(node_id)}")
 
         if in_deg + out_deg >= 65:
             signals.append("High-Throughput P2P Relay — In top tier of total network observations")
         if pr >= 0.023:
             signals.append("Primary Propagation Backbone — Top-tier PageRank structural network prominence")
-        if node_data.get("entity_id") and node_data.get("entity_id") != "unmapped":
-            signals.append(f"Entity Attribution — Mapped to {node_data.get('entity_id')}")
-
-    elif ntype == "entity":
-        entity_id = node_data.get("entity_id", raw_label)
-        structural_metrics = {
-            "Controlled Wallets": len(connected_wallets),
-            "Direct Links": len(all_neighbors)
-        }
-        signals.append(f"Synthetic Entity Entity Umbrella — Directly controls {len(connected_wallets)} wallet nodes")
 
     if not signals:
         signals.append("Nominal Activity — Standard baseline topology metrics")
@@ -229,9 +297,11 @@ def get_node_intelligence_data(
         "data": node_data,
         "metrics": structural_metrics,
         "signals": signals,
+        "relationships": relationships,
         "connected_entities": connected_entities,
         "connected_wallets": connected_wallets,
         "connected_txs": connected_txs,
         "connected_ips": connected_ips,
         "total_neighbors": len(all_neighbors)
     }
+

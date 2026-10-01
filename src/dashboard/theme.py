@@ -5,6 +5,17 @@ CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 CSS_PATH = os.path.join(CURRENT_DIR, "styles.css")
 
 
+def clean_html(html: str) -> str:
+    """
+    Remove leading whitespace and blank lines from HTML strings so Streamlit's
+    underlying Markdown parser (CommonMark) treats the content strictly as raw HTML,
+    preventing any lines with 4+ spaces from being interpreted as indented code blocks (<pre><code>).
+    """
+    if not html:
+        return ""
+    return "\n".join(line.lstrip() for line in html.splitlines() if line.strip())
+
+
 def inject_theme():
     """Inject the CryptoGuard dark theme CSS stylesheet into the Streamlit app."""
     if os.path.exists(CSS_PATH):
@@ -17,7 +28,7 @@ def inject_theme():
 
 def render_sidebar_branding():
     """Render the top CryptoGuard brand identity inside the sidebar."""
-    st.sidebar.markdown("""
+    html_content = """
     <div class="cg-sidebar-brand">
         <div class="cg-brand-icon">🛡️</div>
         <div>
@@ -25,12 +36,13 @@ def render_sidebar_branding():
             <div class="cg-brand-sub">Bitcoin Intelligence</div>
         </div>
     </div>
-    """, unsafe_allow_html=True)
+    """
+    st.sidebar.markdown(clean_html(html_content), unsafe_allow_html=True)
 
 
 def render_sidebar_footer():
     """Render the bottom status indicators in the sidebar."""
-    st.sidebar.markdown("""
+    html_content = """
     <div class="cg-sidebar-footer">
         <div class="cg-status-indicator">
             <span class="cg-dot-active"></span>
@@ -42,7 +54,8 @@ def render_sidebar_footer():
         </div>
         <div class="cg-sidebar-ver">Build: v4.2-intel · Offline</div>
     </div>
-    """, unsafe_allow_html=True)
+    """
+    st.sidebar.markdown(clean_html(html_content), unsafe_allow_html=True)
 
 
 def render_header(title: str, subtitle: str, badge_text: str = "OFFLINE INVESTIGATION PLATFORM", badge_type: str = "lime"):
@@ -50,7 +63,7 @@ def render_header(title: str, subtitle: str, badge_text: str = "OFFLINE INVESTIG
     Render a top application header bar with title, subtitle, and status badge.
     """
     badge_class = f"cg-badge-{badge_type}"
-    st.markdown(f"""
+    html_content = f"""
     <div class="cg-top-header">
         <div class="cg-header-left">
             <h1>{title}</h1>
@@ -60,14 +73,15 @@ def render_header(title: str, subtitle: str, badge_text: str = "OFFLINE INVESTIG
             <span class="cg-badge {badge_class}">● {badge_text}</span>
         </div>
     </div>
-    """, unsafe_allow_html=True)
+    """
+    st.markdown(clean_html(html_content), unsafe_allow_html=True)
 
 
 def render_kpi_card_html(label: str, value: str, description: str, icon: str = "📊") -> str:
     """
     Generate the HTML snippet for a KPI card.
     """
-    return f"""
+    html_content = f"""
     <div class="cg-kpi-card">
         <div class="cg-kpi-top">
             <span class="cg-kpi-label">{label}</span>
@@ -77,6 +91,7 @@ def render_kpi_card_html(label: str, value: str, description: str, icon: str = "
         <div class="cg-kpi-desc">{description}</div>
     </div>
     """
+    return clean_html(html_content)
 
 
 def render_status_badge(text: str, variant: str = "lime") -> str:
@@ -85,3 +100,4 @@ def render_status_badge(text: str, variant: str = "lime") -> str:
     variant: lime, blue, purple, amber, slate
     """
     return f'<span class="cg-badge cg-badge-{variant}">{text}</span>'
+

@@ -15,6 +15,7 @@ for _mod in ["src.dashboard.theme", "src.dashboard.data_loader", "src.dashboard.
         del sys.modules[_mod]
 
 from src.dashboard.theme import (
+    clean_html,
     inject_theme,
     render_header,
     render_sidebar_branding,
@@ -148,7 +149,7 @@ def main():
         st.markdown("<div style='height: 18px;'></div>", unsafe_allow_html=True)
 
         # 3. Investigation Activity Panel
-        st.markdown("""
+        st.markdown(clean_html("""
         <div class="cg-card" style="margin-bottom: 20px;">
             <div class="cg-card-title">
                 <span>Recent Investigation Activity</span>
@@ -158,7 +159,7 @@ def main():
                 Transactions observed across P2P propagation nodes with pattern classification
             </div>
         </div>
-        """, unsafe_allow_html=True)
+        """), unsafe_allow_html=True)
 
         if not tx_features.empty:
             display_cols = [
@@ -200,14 +201,14 @@ def main():
         st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
 
         # 4. Graph Intelligence Section
-        st.markdown("""
+        st.markdown(clean_html("""
         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; margin-bottom: 12px;">
             <div>
                 <span style="font-size: 1.05rem; font-weight: 700; color: #ffffff;">Graph Intelligence</span>
                 <span style="font-size: 0.8rem; color: #94a3b8; margin-left: 10px;">Pre-computed structural layers</span>
             </div>
         </div>
-        """, unsafe_allow_html=True)
+        """), unsafe_allow_html=True)
 
         render_graph_summary_cards(summary)
 
@@ -316,7 +317,7 @@ def main():
 
         with graph_col:
             # Subgraph status header
-            st.markdown(f"""
+            st.markdown(clean_html(f"""
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                 <span style="font-size: 0.92rem; font-weight: 600; color: #ffffff;">
                     Interactive Topology Subgraph
@@ -325,7 +326,7 @@ def main():
                     {total_shown} Nodes · {subgraph.number_of_edges()} Edges
                 </span>
             </div>
-            """, unsafe_allow_html=True)
+            """), unsafe_allow_html=True)
 
             # PyVis Interactive Network Graph
             html_code = build_pyvis_network(
@@ -572,12 +573,12 @@ def main():
         st.markdown("<div style='height: 14px;'></div>", unsafe_allow_html=True)
 
         # Full IP Graph Metrics Table
-        st.markdown("""
+        st.markdown(clean_html("""
         <div class="cg-card" style="margin-bottom: 12px;">
             <div class="cg-card-title">IP Graph Structural Metrics (Ranked by PageRank)</div>
             <div class="cg-card-subtitle">Comprehensive centrality scores calculated across the 50-node P2P communication graph</div>
         </div>
-        """, unsafe_allow_html=True)
+        """), unsafe_allow_html=True)
 
         if not ip_metrics.empty:
             ip_disp = ip_metrics.copy()
@@ -606,26 +607,26 @@ def main():
         # Explanation Cards with Neutral Terminology
         m_col1, m_col2, m_col3 = st.columns(3)
         with m_col1:
-            st.markdown("""
+            st.markdown(clean_html("""
             <div class="cg-card">
                 <div class="cg-card-title" style="color: #38bdf8;">High Connectivity (Degree)</div>
                 <div class="cg-card-subtitle">Measures the total volume of direct incoming and outgoing links. Represents high-throughput aggregation hubs.</div>
             </div>
-            """, unsafe_allow_html=True)
+            """), unsafe_allow_html=True)
         with m_col2:
-            st.markdown("""
+            st.markdown(clean_html("""
             <div class="cg-card">
                 <div class="cg-card-title" style="color: #bcf234;">Structural Importance (PageRank)</div>
                 <div class="cg-card-subtitle">Quantifies topological prominence based on the importance of connected neighbors across the complete network.</div>
             </div>
-            """, unsafe_allow_html=True)
+            """), unsafe_allow_html=True)
         with m_col3:
-            st.markdown("""
+            st.markdown(clean_html("""
             <div class="cg-card">
                 <div class="cg-card-title" style="color: #a855f7;">Bridge Centrality (Betweenness)</div>
                 <div class="cg-card-subtitle">Identifies critical intermediary conduits along shortest paths connecting disparate wallet or IP clusters.</div>
             </div>
-            """, unsafe_allow_html=True)
+            """), unsafe_allow_html=True)
 
         st.markdown("<div style='height: 16px;'></div>", unsafe_allow_html=True)
 
@@ -716,7 +717,7 @@ def main():
         )
 
         # Pipeline Flow Visualizer
-        st.markdown("""
+        st.markdown(clean_html("""
         <div class="cg-card" style="margin-bottom: 20px;">
             <div class="cg-card-title">Completed Offline Intelligence Pipeline</div>
             <div class="cg-card-subtitle">End-to-end data lifecycle from synthetic generation through graph visualization</div>
@@ -773,7 +774,7 @@ def main():
                 </div>
             </div>
         </div>
-        """, unsafe_allow_html=True)
+        """), unsafe_allow_html=True)
 
         # Roadmap & Upcoming Phases
         st.markdown("### 🚀 Project Roadmap & Implementation Status")
@@ -781,7 +782,7 @@ def main():
         r_col1, r_col2 = st.columns(2)
 
         with r_col1:
-            st.markdown("""
+            st.markdown(clean_html("""
             <div class="cg-card">
                 <div style="font-size: 0.95rem; font-weight: 700; color: #ffffff; margin-bottom: 10px;">
                     Completed Modules (Phase 1–4)
@@ -810,10 +811,10 @@ def main():
                     </div>
                 </div>
             </div>
-            """, unsafe_allow_html=True)
+            """), unsafe_allow_html=True)
 
         with r_col2:
-            st.markdown("""
+            st.markdown(clean_html("""
             <div class="cg-card">
                 <div style="font-size: 0.95rem; font-weight: 700; color: #ffffff; margin-bottom: 10px;">
                     Upcoming Capabilities (Phase 5–8 Roadmap)
@@ -837,12 +838,12 @@ def main():
                     </div>
                 </div>
             </div>
-            """, unsafe_allow_html=True)
+            """), unsafe_allow_html=True)
 
         st.markdown("<div style='height: 16px;'></div>", unsafe_allow_html=True)
 
         # Technical Specifications
-        st.markdown("""
+        st.markdown(clean_html("""
         <div class="cg-card">
             <div class="cg-card-title">Technical Specifications & Data Verification</div>
             <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 10px;">
@@ -868,7 +869,7 @@ def main():
                 </div>
             </div>
         </div>
-        """, unsafe_allow_html=True)
+        """), unsafe_allow_html=True)
 
 
 if __name__ == "__main__":
